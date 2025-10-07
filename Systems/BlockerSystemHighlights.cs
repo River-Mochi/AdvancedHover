@@ -1,29 +1,33 @@
 // Systems/BlockerSystemHighlights.cs
 namespace AdvancedHoverSystem
 {
-    using Colossal.Logging;
-    using Game;
+    using Colossal.Serialization.Entities; // Purpose
+    using Game;                            // GameMode
+    using Game.Rendering;                  // RenderingSystem
     using Unity.Entities;
 
-    /// <summary>
-    /// Runtime highlight/outline blocker (hover suppression).
-    /// Must be partial for Entities source generators.
-    /// </summary>
-    public sealed partial class BlockerSystemHighlights : GameSystemBase
+    // NOTE: partial is required for the Unity Entities source generator.
+    public partial class BlockerSystemHighlights : GameSystemBase
     {
-        private ILog _log = default!;
+        private RenderingSystem m_Rendering = null!;
 
         protected override void OnCreate()
         {
             base.OnCreate();
-            _log = Mod.Log;
-            Enabled = true; // keep enabled; body is safe no-op
+            m_Rendering = World.GetOrCreateSystemManaged<RenderingSystem>();
         }
 
+        /// <summary>Keep hideOverlay in sync with our checkbox.</summary>
         protected override void OnUpdate()
         {
-            // TODO: wire concrete suppression once we confirm the right handle/flag.
-            // Keep this method extremely light; no per-frame allocations.
+            var settings = Mod.Settings;
+            m_Rendering.hideOverlay = settings != null && settings.DisableHoverOutline;
+        }
+
+        /// <summary>Lifecycle hook present for parity; nothing to do here.</summary>
+        protected override void OnGameLoadingComplete(Purpose purpose, GameMode mode)
+        {
+            base.OnGameLoadingComplete(purpose, mode);
         }
     }
 }

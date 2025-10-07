@@ -1,12 +1,13 @@
 // Mod.cs
 namespace AdvancedHoverSystem
 {
-    using Colossal;
-    using Colossal.IO.AssetDatabase;
-    using Colossal.Logging;
-    using Game;
-    using Game.Modding;
-    using Game.SceneFlow;
+    using Colossal;                   // IDictionarySource
+    using Colossal.IO.AssetDatabase;  // AssetDatabase
+    using Colossal.Logging;           // ILog, LogManager
+    using Game;                       // UpdateSystem, GameMode
+    using Game.Modding;               // IMod
+    using Game.SceneFlow;             // GameManager
+    using Game.Settings;
 
     public sealed class Mod : IMod
     {
@@ -16,20 +17,23 @@ namespace AdvancedHoverSystem
         public static readonly ILog Log =
             LogManager.GetLogger("AdvancedHover").SetShowsErrorsInUI(false);
 
-        internal static Setting? Settings { get; private set; }
+        internal static Setting? Settings
+        {
+            get; private set;
+        }
 
         public void OnLoad(UpdateSystem updateSystem)
         {
-            Log.Info($"[AHS] {Name} {Version} OnLoad");
+            Log.Info($"{Name} {Version} OnLoad");
 
             // Settings instance and persistence (path must match Setting.cs [FileLocation])
             var settings = new Setting(this);
             Settings = settings;
+
             AssetDatabase.global.LoadSettings(
                 "ModsSettings/AdvancedHover/AdvancedHover",
                 settings,
-                new Setting(this)
-            );
+                new Setting(this));
 
             // Locale BEFORE Options UI so labels resolve
             AddLocale("en-US", new LocaleEN(settings));
@@ -37,22 +41,24 @@ namespace AdvancedHoverSystem
             // Register options
             settings.RegisterInOptionsUI();
 
-            // --- Systems ---
+            // Systems
             var world = updateSystem.World;
 
-            // 1) Guidelines (yen translucent option) — one-shot
-            world.GetOrCreateSystemManaged<RenderSystemGuidelines>().Enabled = true;
+            // Load-time systems (only use OnGameLoadingComplete)
+            var hover = world.GetOrCreateSystemManaged<RenderSystemHover>();
+            hover.Enabled = false; // no per-frame work; only lifecycle hooks
 
-            // 2) Hover color (Gizmo alpha-locked; hue only) — one-shot
-            world.GetOrCreateSystemManaged<RenderSystemHover>().Enabled = true;
+            var guides = world.GetOrCreateSystemManaged<RenderSystemGuidelines>();
+            guides.Enabled = false; // no per-frame work; only lifecycle hooks
 
-            // 3) Runtime blocker for hover outlines (placeholder; safe no-op)
-            world.GetOrCreateSystemManaged<BlockerSystemHighlights>().Enabled = true;
+            // Runtime blocker (per-frame write of hideOverlay)
+            var blocker = world.GetOrCreateSystemManaged<BlockerSystemHighlights>();
+            blocker.Enabled = true;
         }
 
         public void OnDispose()
         {
-            Log.Info($"[AHS] {Name} {Version} OnDispose");
+            Log.Info($"{Name} {Version} OnDispose");
             Settings?.UnregisterInOptionsUI();
             Settings = null;
         }
@@ -62,9 +68,10 @@ namespace AdvancedHoverSystem
             var lm = GameManager.instance?.localizationManager;
             if (lm == null)
             {
-                Log.Warn("[AHS] LocalizationManager null; cannot add locale.");
+                Log.Warn("LocalizationManager null; cannot add locale.");
                 return;
             }
+
             lm.AddSource(localeId, source);
         }
     }

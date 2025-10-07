@@ -1,19 +1,19 @@
 // Setting.cs
 namespace AdvancedHoverSystem
 {
-    using Colossal.IO.AssetDatabase;   // [FileLocation]
-    using Game.Modding;                // IMod
-    using Game.Settings;               // ModSetting + [SettingsUI*]
+    using Colossal.IO.AssetDatabase;  // [FileLocation]
+    using Game.Modding;               // IMod
+    using Game.Settings;              // ModSetting + [SettingsUI*]
 
-    // Ordered exactly as you requested (values follow declaration order)
+    // Dropdown enum for hover outline color
     public enum HoverColorPreset
     {
-        MediumGray = 0, // default
+        MediumGray = 0,   // default
         Purple = 1,
         Green = 2,
         MutedWhite = 3,
         Tan = 4,
-        Vanilla = 5, // game's built-in cyan/blue
+        Vanilla = 5       // game's built-in cyan-like; we don't override
     }
 
     [FileLocation("ModsSettings/AdvancedHover/AdvancedHover")]
@@ -28,23 +28,23 @@ namespace AdvancedHoverSystem
 
         public Setting(IMod mod) : base(mod) { }
 
-        // (kept) checkbox for potential future suppression logic
+        // Checkbox: Disable vanilla gizmo overlay (hover outline)
         [SettingsUISection(MainTab, MainGroup)]
         public bool DisableHoverOutline { get; set; } = false;
 
-        // Dropdown (now ordered & pruned)
+        // Dropdown: enum => auto dropdown
         [SettingsUISection(MainTab, MainGroup)]
         public HoverColorPreset HoverColor { get; set; } = HoverColorPreset.MediumGray;
 
-        // Translucent guidelines toggle
+        // Checkbox: Transparent guidelines (alpha scaling, yenyang-style)
         [SettingsUISection(MainTab, GuideGroup)]
         public bool TransparentGuidelines { get; set; } = false;
 
         public override void SetDefaults()
         {
             DisableHoverOutline = false;
-            HoverColor = HoverColorPreset.MediumGray;
-            TransparentGuidelines = false; // vanilla guideline palette by default
+            HoverColor = HoverColorPreset.MediumGray; // requested default
+            TransparentGuidelines = false;            // vanilla guideline palette by default
         }
     }
 }

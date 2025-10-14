@@ -5,7 +5,7 @@ namespace AdvancedHoverSystem
     using Game;                            // GameMode
     using Game.Prefabs;                    // GuideLineSettingsData, PrefabSystem, PrefabID
     using Unity.Entities;
-    using UnityEngine;
+    using UnityEngine;                     // Color
 
     public partial class RenderSystemGuidelines : GameSystemBase
     {
@@ -41,7 +41,7 @@ namespace AdvancedHoverSystem
 
             var gd = EntityManager.GetComponentData<GuideLineSettingsData>(e);
 
-            // yenyang-style translucent values (alpha respected here)
+            // translucent values (alpha respected here)
             gd.m_HighPriorityColor = new Color(1.000f, 1.000f, 1.000f, 0.05f);
             gd.m_MediumPriorityColor = new Color(0.753f, 0.753f, 0.753f, 0.55f);
             gd.m_LowPriorityColor = new Color(0.502f, 0.869f, 1.000f, 0.25f);

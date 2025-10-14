@@ -14,7 +14,7 @@
     <!-- FIX: use our flat namespace -->
     <RootNamespace>AdvancedHoverSystem</RootNamespace>
 
-    <!-- Nullable globally (no per-file pragmas) -->
+    <!-- Nullable globally -->
     <Nullable>enable</Nullable>
 
   </PropertyGroup>

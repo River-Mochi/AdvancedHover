@@ -1,51 +1,71 @@
 // LocaleEN.cs
+// Advanced Hover — English locale entries (tabs, groups, labels, dropdown items)
+
 namespace AdvancedHoverSystem
 {
     using System.Collections.Generic;
     using Colossal; // IDictionarySource
 
-    /// <summary>English locale (en-US)</summary>
     public sealed class LocaleEN : IDictionarySource
     {
         private readonly Setting m_Setting;
+
         public LocaleEN(Setting setting)
         {
             m_Setting = setting;
         }
 
         public IEnumerable<KeyValuePair<string, string>> ReadEntries(
-            IList<IDictionaryEntryError> errors, Dictionary<string, int> indexCounts)
+            IList<IDictionaryEntryError> errors,
+            Dictionary<string, int> indexCounts)
         {
             return new Dictionary<string, string>
             {
-                // Options menu entry
+                // Settings root title
                 { m_Setting.GetSettingsLocaleID(), "Advanced Hover" },
 
                 // Tabs
-                { m_Setting.GetOptionTabLocaleID(Setting.MainTab), "Main" },
+                { m_Setting.GetOptionTabLocaleID(Setting.kTabActions), "Actions" },
+                { m_Setting.GetOptionTabLocaleID(Setting.kTabAbout),   "About"   },
 
-                // Groups (Main tab)
-                { m_Setting.GetOptionGroupLocaleID(Setting.MainGroup), "Hover Outline" },
-                { m_Setting.GetOptionGroupLocaleID(Setting.GuideGroup), "Guidelines" },
+                // Groups
+                { m_Setting.GetOptionGroupLocaleID(Setting.kGroupActionsMain),    "Main"         },
+                { m_Setting.GetOptionGroupLocaleID(Setting.kGroupActionsKeybind), "Key bindings" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.kGroupAboutInfo),      "Information"  },
+                { m_Setting.GetOptionGroupLocaleID(Setting.kGroupAboutDebug),     "Debug"        },
 
-                // Main >> Hover Outline
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.DisableHoverOutline)), "Disable hover outlines" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.DisableHoverOutline)), "Suppress vanilla hover highlights around prefabs." },
+                // Options — Actions/Main
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.DisableHoverOutline)), "Disable hover outline color" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.DisableHoverOutline)),  "When enabled, the hover outline color is hidden regardless of the dropdown selection." },
 
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.HoverColor)), "Hover outline color" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.HoverColor)), "Re-tint the hover outline (alpha ignored by gizmo). 'Vanilla' = game default." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.HoverPresetIndex)), "Hover outline color" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.HoverPresetIndex)),  "Choose a preset color for hovered prefabs." },
 
-                // Main >> Guidelines
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.TransparentGuidelines)), "Translucent guidelines" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.TransparentGuidelines)), "Makes curb/placement guides semi-transparent like in yenyang’s screenshot." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.EnableGuidelineTranslucency)), "Guidelines translucency" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.EnableGuidelineTranslucency)),  "When enabled, guideline dashes render translucent." },
 
-                // Enum values
-                { m_Setting.GetEnumValueLocaleID(HoverColorPreset.MediumGray), "Medium Gray (default)" },
-                { m_Setting.GetEnumValueLocaleID(HoverColorPreset.Purple),     "Purple" },
-                { m_Setting.GetEnumValueLocaleID(HoverColorPreset.Green),      "Green" },
-                { m_Setting.GetEnumValueLocaleID(HoverColorPreset.MutedWhite), "Muted White" },
-                { m_Setting.GetEnumValueLocaleID(HoverColorPreset.Tan),        "Tan" },
-                { m_Setting.GetEnumValueLocaleID(HoverColorPreset.Vanilla),    "Vanilla (game default)" },
+                // Options — Actions/Keybinds
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.ToggleOverlayBinding)), "Toggle overlay (F8)" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.ToggleOverlayBinding)),  "Keyboard shortcut to toggle the hover outline on/off." },
+
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.ResetBindings)), "Reset key bindings" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.ResetBindings)),  "Restore the default key bindings for this mod." },
+
+                // Optional binding map/key strings (used by the keybinding UI)
+                { m_Setting.GetBindingMapLocaleID(), "Advanced Hover — key bindings" },
+                { m_Setting.GetBindingKeyLocaleID(Mod.kToggleOverlayActionName), "Toggle overlay" },
+
+                // Options — About
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.NameDisplay)),    "Mod name" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.VersionDisplay)), "Version"  },
+
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.VerboseLogging)), "Verbose logging" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.VerboseLogging)),  "When enabled, writes extra diagnostics to the log." },
+
+                // Dropdown item display names
+                { "AH.Color.MediumGray",  "Medium Gray (river style)" },
+                { "AH.Color.MutedPurple", "Muted Purple (yen style)"  },
+                { "AH.Color.GameDefault", "Game Default (cyan blue)"  },
             };
         }
 

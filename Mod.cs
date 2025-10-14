@@ -1,77 +1,93 @@
 // Mod.cs
+// Advanced Hover — Mod entry point: settings, locales, register keybindings, initialise systems
+
 namespace AdvancedHoverSystem
 {
-    using Colossal;                   // IDictionarySource
-    using Colossal.IO.AssetDatabase;  // AssetDatabase
-    using Colossal.Logging;           // ILog, LogManager
-    using Game;                       // UpdateSystem, GameMode
-    using Game.Modding;               // IMod
-    using Game.SceneFlow;             // GameManager
-    using Game.Settings;
+    using Colossal;                            // IDictionarySource
+    using Colossal.IO.AssetDatabase;           // AssetDatabase.global.LoadSettings
+    using Colossal.Logging;                    // ILog, LogManager
+    using Game;                                // UpdateSystem
+    using Game.Modding;                        // IMod
+    using Game.SceneFlow;                      // GameManager
+    using UnityEngine;                         // Color
 
     public sealed class Mod : IMod
     {
-        public const string Name = "Advanced Hover";
-        public const string Version = "0.1.0";
+        public const string kName = "Advanced Hover";
+        public const string kVersionShort = "0.1.0";
 
-        public static readonly ILog Log =
+        // Input action name referenced by Setting.cs
+        public const string kToggleOverlayActionName = "ToggleOverlay";
+
+        public static readonly ILog s_Log =
             LogManager.GetLogger("AdvancedHover").SetShowsErrorsInUI(false);
 
-        internal static Setting? Settings
+        public static Setting? Settings
         {
             get; private set;
         }
 
         public void OnLoad(UpdateSystem updateSystem)
         {
-            Log.Info($"{Name} {Version} OnLoad");
+            s_Log.Info($"{kName} v{kVersionShort} OnLoad");
 
-            // Settings instance and persistence (path must match Setting.cs [FileLocation])
+            if (GameManager.instance?.modManager != null &&
+                GameManager.instance.modManager.TryGetExecutableAsset(this, out var asset))
+            {
+                s_Log.Info($"Mod asset path: {asset.path}");
+            }
+
+            // Settings first (so locale can bind to it)
             var settings = new Setting(this);
             Settings = settings;
 
-            AssetDatabase.global.LoadSettings(
-                "ModsSettings/AdvancedHover/AdvancedHover",
-                settings,
-                new Setting(this));
+            // Locales
+            TryAddLocale("en-US", new LocaleEN(settings));
 
-            // Locale BEFORE Options UI so labels resolve
-            AddLocale("en-US", new LocaleEN(settings));
-
-            // Register options
+            // Load + show in Options UI
+            AssetDatabase.global.LoadSettings("AdvancedHover", settings, new Setting(this));
             settings.RegisterInOptionsUI();
 
-            // Systems
-            var world = updateSystem.World;
+            // Ensure actions exist for the attributes in Setting.cs
+            settings.RegisterKeyBindings();
 
-            // Load-time systems (only use OnGameLoadingComplete)
-            var hover = world.GetOrCreateSystemManaged<RenderSystemHover>();
-            hover.Enabled = false; // no per-frame work; only lifecycle hooks
+            // Apply initial UI state
+            RenderSystemGuidelines.Configure(settings.EnableGuidelineTranslucency);
 
-            var guides = world.GetOrCreateSystemManaged<RenderSystemGuidelines>();
-            guides.Enabled = false; // no per-frame work; only lifecycle hooks
+            // Apply initial hover color from dropdown (respect "DisableHoverOutline")
+            {
+                bool show = !settings.DisableHoverOutline;
+                int preset = settings.HoverPresetIndex;
+                string name = settings.GetPresetDisplayName(preset);
+                Color c = show ? RenderSystemHover.ResolvePresetColor(preset) : new Color(0f, 0f, 0f, 0f);
+                RenderSystemHover.ApplyHoverColor(c, show, name);
+            }
 
-            // Runtime blocker (per-frame write of hideOverlay)
-            var blocker = world.GetOrCreateSystemManaged<BlockerSystemHighlights>();
-            blocker.Enabled = true;
+            // Hook up F8 handler
+            HotKeySystem.Initialize(settings);
         }
 
         public void OnDispose()
         {
-            Log.Info($"{Name} {Version} OnDispose");
-            Settings?.UnregisterInOptionsUI();
-            Settings = null;
+            HotKeySystem.Dispose();
+
+            if (Settings != null)
+            {
+                Settings.UnregisterInOptionsUI();
+                Settings = null;
+            }
+
+            s_Log.Info("OnDispose");
         }
 
-        private static void AddLocale(string localeId, IDictionarySource source)
+        private static void TryAddLocale(string localeId, IDictionarySource source)
         {
             var lm = GameManager.instance?.localizationManager;
             if (lm == null)
             {
-                Log.Warn("LocalizationManager null; cannot add locale.");
+                s_Log.Warn($"No LocalizationManager; cannot add locale '{localeId}'.");
                 return;
             }
-
             lm.AddSource(localeId, source);
         }
     }

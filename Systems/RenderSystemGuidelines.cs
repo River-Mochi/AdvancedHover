@@ -1,53 +1,104 @@
 // Systems/RenderSystemGuidelines.cs
+// Advanced Hover — keep guideline dashes translucent (toggle-based)
+
 namespace AdvancedHoverSystem
 {
-    using Colossal.Serialization.Entities; // Purpose
-    using Game;                            // GameMode
-    using Game.Prefabs;                    // GuideLineSettingsData, PrefabSystem, PrefabID
-    using Unity.Entities;
+    using Game;
     using UnityEngine;
 
     public partial class RenderSystemGuidelines : GameSystemBase
     {
-        private PrefabSystem m_Prefabs = null!;
+        private static readonly int s_ColorId = Shader.PropertyToID("_Color");
+        private static readonly int s_BaseColorId = Shader.PropertyToID("_BaseColor");
 
-        protected override void OnCreate()
-        {
-            base.OnCreate();
-            m_Prefabs = World.GetOrCreateSystemManaged<PrefabSystem>();
-        }
+        private static Material[]? s_GuidelineCandidates;
+        private static bool s_Enabled;
+        private static float s_Alpha = 0.35f;
+
+        private int m_Ticks;
 
         protected override void OnUpdate()
         {
+            if (!s_Enabled)
+                return;
+
+            // Every ~0.5s, re-assert alpha (tools/materials may be rebuilt)
+            if (++m_Ticks % 30 != 0)
+                return;
+
+            ApplyAlphaToAll(s_Alpha, "Periodic");
         }
 
-        /// <summary>Apply translucent guideline palette on load when enabled.</summary>
-        protected override void OnGameLoadingComplete(Purpose purpose, GameMode mode)
+        public static void Configure(bool enabled)
         {
-            base.OnGameLoadingComplete(purpose, mode);
+            s_Enabled = enabled;
+            s_Alpha = enabled ? 0.35f : 1f;
+            ApplyAlphaToAll(s_Alpha, "Configure");
+        }
 
-            var settings = Mod.Settings;
-            if (settings == null || !settings.TransparentGuidelines)
-                return;
+        private static void ApplyAlphaToAll(float alpha, string reason)
+        {
+            var mats = GetGuidelineCandidates();
+            int changed = 0;
 
-            if (!m_Prefabs.TryGetPrefab(new PrefabID(nameof(RenderingSettingsPrefab), "RenderingSettings"), out PrefabBase prefab))
-                return;
+            foreach (var mat in mats)
+            {
+                if (mat == null)
+                    continue;
 
-            if (!m_Prefabs.TryGetEntity(prefab, out Entity e))
-                return;
+                if (mat.HasProperty(s_ColorId))
+                {
+                    var c = mat.GetColor(s_ColorId);
+                    if (Mathf.Abs(c.a - alpha) > 0.01f)
+                    {
+                        c.a = alpha;
+                        mat.SetColor(s_ColorId, c);
+                        changed++;
+                    }
+                }
+                if (mat.HasProperty(s_BaseColorId))
+                {
+                    var c = mat.GetColor(s_BaseColorId);
+                    if (Mathf.Abs(c.a - alpha) > 0.01f)
+                    {
+                        c.a = alpha;
+                        mat.SetColor(s_BaseColorId, c);
+                        changed++;
+                    }
+                }
+            }
 
-            if (!EntityManager.HasComponent<GuideLineSettingsData>(e))
-                return;
+            if (Mod.Settings?.VerboseLogging == true)
+            {
+                Mod.s_Log.Info($"[Guidelines] {reason} alpha={alpha:0.##} on {changed} material value(s)");
+            }
+        }
 
-            var gd = EntityManager.GetComponentData<GuideLineSettingsData>(e);
+        private static Material[] GetGuidelineCandidates()
+        {
+            if (s_GuidelineCandidates != null)
+                return s_GuidelineCandidates;
 
-            // yenyang-style translucent values (alpha respected here)
-            gd.m_HighPriorityColor = new Color(1.000f, 1.000f, 1.000f, 0.05f);
-            gd.m_MediumPriorityColor = new Color(0.753f, 0.753f, 0.753f, 0.55f);
-            gd.m_LowPriorityColor = new Color(0.502f, 0.869f, 1.000f, 0.25f);
-            gd.m_VeryLowPriorityColor = new Color(0.695f, 0.877f, 1.000f, 0.584f);
+            var all = Resources.FindObjectsOfTypeAll<Material>();
+            var list = new System.Collections.Generic.List<Material>();
+            foreach (var mat in all)
+            {
+                if (mat == null)
+                    continue;
+                string n = mat.name ?? string.Empty;
+                if (n.Length == 0)
+                    continue;
 
-            EntityManager.SetComponentData(e, gd);
+                if (n.IndexOf("Guideline", System.StringComparison.OrdinalIgnoreCase) >= 0
+                    || n.IndexOf("PlacementGuide", System.StringComparison.OrdinalIgnoreCase) >= 0
+                    || n.IndexOf("EditorGizmoLine", System.StringComparison.OrdinalIgnoreCase) >= 0
+                    || n.IndexOf("GridGuide", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    list.Add(mat);
+                }
+            }
+            s_GuidelineCandidates = list.Count > 0 ? list.ToArray() : System.Array.Empty<Material>();
+            return s_GuidelineCandidates;
         }
     }
 }

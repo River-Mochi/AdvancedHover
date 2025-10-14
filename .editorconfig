@@ -75,3 +75,10 @@ dotnet_naming_rule.internal_static_fields_s_prefix.severity = suggestion
 dotnet_naming_rule.const_fields_k_prefix.symbols = const_fields
 dotnet_naming_rule.const_fields_k_prefix.style = k_prefix
 dotnet_naming_rule.const_fields_k_prefix.severity = suggestion
+
+# Disable "namespace does not match folder structure" analyzer
+[*.cs]
+dotnet_diagnostic.IDE0130.severity = none
+
+# (Optional) also turn off the underlying code style that prefers matching namespaces
+dotnet_style_namespace_match_folder = false:silent

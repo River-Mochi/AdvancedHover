@@ -1,6 +1,6 @@
 // Systems/RenderSystemGuidelines.cs
 // Advanced Hover — Translucent guidelines by editing RenderingSettings/GuideLineSettingsData.
-// Applies on city load AND whenever the Options UI toggle is changed.
+// Applies on city load AND immediately when the Options UI toggle is changed.
 
 namespace AdvancedHoverSystem
 {
@@ -14,7 +14,10 @@ namespace AdvancedHoverSystem
     {
         private PrefabSystem m_Prefabs = null!;
 
-        // Bridge from Setting.TransparentGuidelines to this system.
+        // Instance handle so static callers (from Settings) can apply immediately.
+        private static RenderSystemGuidelines? s_Instance;
+
+        // Bridges the Options UI to this system.
         private static bool s_LastEnabled = true;
         private static bool s_PendingApply;
 
@@ -22,6 +25,15 @@ namespace AdvancedHoverSystem
         {
             base.OnCreate();
             m_Prefabs = World.GetOrCreateSystemManaged<PrefabSystem>();
+            s_Instance = this; // allow immediate Apply from the settings toggle
+        }
+
+        protected override void OnDestroy()
+        {
+            if (ReferenceEquals(s_Instance, this))
+                s_Instance = null;
+
+            base.OnDestroy();
         }
 
         protected override void OnUpdate()
@@ -36,14 +48,27 @@ namespace AdvancedHoverSystem
         protected override void OnGameLoadingComplete(Purpose purpose, GameMode mode)
         {
             base.OnGameLoadingComplete(purpose, mode);
-            // Apply the current setting when the city is ready.
+            // Apply current toggle when the city entities are ready.
             Apply(Mod.Settings?.TransparentGuidelines ?? true, "OnGameLoadingComplete");
         }
 
-        /// <summary>Called from Setting.TransparentGuidelines setter.</summary>
+        /// <summary>
+        /// Called from Setting.TransparentGuidelines setter.
+        /// If we have a live instance (we're in a city), apply immediately.
+        /// Otherwise, queue for the next update/load.
+        /// </summary>
         public static void RequestApplyFromSettings(bool enabled)
         {
             s_LastEnabled = enabled;
+
+            // Try immediate apply first (works when the user toggles inside a running city).
+            if (s_Instance != null)
+            {
+                s_Instance.Apply(enabled, "Request(Immediate)");
+                return;
+            }
+
+            // Fallback: queue (e.g., toggled from frontend / no game world yet).
             s_PendingApply = true;
         }
 
@@ -51,24 +76,28 @@ namespace AdvancedHoverSystem
 
         private void Apply(bool enabled, string reason)
         {
+            // Locate RenderingSettings prefab & entity.
             if (!m_Prefabs.TryGetPrefab(new PrefabID(nameof(RenderingSettingsPrefab), "RenderingSettings"), out PrefabBase prefab))
             {
                 if (Mod.Settings?.VerboseLogging == true)
-                    Mod.s_Log.Info($"[Guidelines] {reason}: RenderingSettings prefab not found.");
+                    Mod.s_Log.Info($"[Guidelines] {reason}: RenderingSettings prefab not found. Will retry on Update.");
+                s_PendingApply = true; // retry next frame in case the world is still settling
                 return;
             }
 
             if (!m_Prefabs.TryGetEntity(prefab, out Entity entity))
             {
                 if (Mod.Settings?.VerboseLogging == true)
-                    Mod.s_Log.Info($"[Guidelines] {reason}: Could not get entity for RenderingSettings.");
+                    Mod.s_Log.Info($"[Guidelines] {reason}: Could not get entity for RenderingSettings. Will retry on Update.");
+                s_PendingApply = true;
                 return;
             }
 
             if (!EntityManager.HasComponent<GuideLineSettingsData>(entity))
             {
                 if (Mod.Settings?.VerboseLogging == true)
-                    Mod.s_Log.Info($"[Guidelines] {reason}: Entity missing GuideLineSettingsData.");
+                    Mod.s_Log.Info($"[Guidelines] {reason}: Entity missing GuideLineSettingsData. Will retry on Update.");
+                s_PendingApply = true;
                 return;
             }
 

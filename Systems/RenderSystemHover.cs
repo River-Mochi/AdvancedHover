@@ -45,14 +45,14 @@ namespace AdvancedHoverSystem
         {
             return preset switch
             {
-                0 => new Color(0.420f, 0.420f, 0.420f, 0.25f), // Medium Gray
-                1 => new Color(0.400f, 0.200f, 0.550f, 0.25f), // Muted Purple
+                0 => new Color(0.420f, 0.420f, 0.420f, 0.15f), // Medium Gray
+                1 => new Color(0.400f, 0.200f, 0.550f, 0.15f), // Muted Purple
                 2 => GetGameDefault(),
-                _ => new Color(0.420f, 0.420f, 0.420f, 0.25f),
+                _ => new Color(0.420f, 0.420f, 0.420f, 0.15f),
             };
         }
 
-        public static Color GetGameDefault() => new Color(0f, 1f, 1f, 0.35f);
+        public static Color GetGameDefault() => new Color(0f, 1f, 1f, 0.15f);
 
         public static void ApplyHoverColor(Color color, bool show, string presetName)
         {

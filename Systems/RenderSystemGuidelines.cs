@@ -1,6 +1,6 @@
 // Systems/RenderSystemGuidelines.cs
 // Advanced Hover — Translucent guidelines by editing RenderingSettings/GuideLineSettingsData.
-// Applies on city load and whenever the Options UI toggle is changed.
+// Applies on city load AND whenever the Options UI toggle is changed.
 
 namespace AdvancedHoverSystem
 {
@@ -14,7 +14,7 @@ namespace AdvancedHoverSystem
     {
         private PrefabSystem m_Prefabs = null!;
 
-        // These bridge the Options UI (Setting.TransparentGuidelines) to the system.
+        // Bridge from Setting.TransparentGuidelines to this system.
         private static bool s_LastEnabled = true;
         private static bool s_PendingApply;
 
@@ -36,13 +36,11 @@ namespace AdvancedHoverSystem
         protected override void OnGameLoadingComplete(Purpose purpose, GameMode mode)
         {
             base.OnGameLoadingComplete(purpose, mode);
-            // Apply current toggle when the city entities are ready.
+            // Apply the current setting when the city is ready.
             Apply(Mod.Settings?.TransparentGuidelines ?? true, "OnGameLoadingComplete");
         }
 
-        /// <summary>
-        /// Called from Setting.TransparentGuidelines setter.
-        /// </summary>
+        /// <summary>Called from Setting.TransparentGuidelines setter.</summary>
         public static void RequestApplyFromSettings(bool enabled)
         {
             s_LastEnabled = enabled;
@@ -53,7 +51,6 @@ namespace AdvancedHoverSystem
 
         private void Apply(bool enabled, string reason)
         {
-            // Locate RenderingSettings prefab & entity.
             if (!m_Prefabs.TryGetPrefab(new PrefabID(nameof(RenderingSettingsPrefab), "RenderingSettings"), out PrefabBase prefab))
             {
                 if (Mod.Settings?.VerboseLogging == true)
@@ -79,7 +76,7 @@ namespace AdvancedHoverSystem
 
             if (enabled)
             {
-                // translucent palette (alpha respected by the engine).
+                // Translucent palette (alpha respected by the engine).
                 data.m_HighPriorityColor = new Color(1.000f, 1.000f, 1.000f, 0.05f);
                 data.m_MediumPriorityColor = new Color(0.753f, 0.753f, 0.753f, 0.55f);
                 data.m_LowPriorityColor = new Color(0.502f, 0.869f, 1.000f, 0.25f);
@@ -87,7 +84,7 @@ namespace AdvancedHoverSystem
             }
             else
             {
-                // Restore full opacity (leave RGB as-is to respect game palette).
+                // Restore full opacity (keep RGB to respect the game palette).
                 data.m_HighPriorityColor.a = 1f;
                 data.m_MediumPriorityColor.a = 1f;
                 data.m_LowPriorityColor.a = 1f;

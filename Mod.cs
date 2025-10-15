@@ -51,7 +51,12 @@ namespace AdvancedHoverSystem
             // Ensure actions exist for the attributes in Setting.cs
             settings.RegisterKeyBindings();
 
-            // Apply initial UI state after RegisterInOptionsUI
+            // --- IMPORTANT: create & enable the guideline system so it can apply on load AND on toggle changes.
+            var world = updateSystem.World;
+            var guides = world.GetOrCreateSystemManaged<RenderSystemGuidelines>();
+            guides.Enabled = true; // OnUpdate must run to handle RequestApplyFromSettings
+
+            // Apply initial guideline state (resolves on first OnUpdate or immediately if city already loaded)
             RenderSystemGuidelines.RequestApplyFromSettings(Settings.TransparentGuidelines);
 
             // Apply initial hover color from dropdown (respect "DisableHoverOutline")
@@ -63,7 +68,7 @@ namespace AdvancedHoverSystem
                 RenderSystemHover.ApplyHoverColor(c, show, name);
             }
 
-            // Hook up F8 handler
+            // Hook up F8 handler (unchanged)
             HotKeySystem.Initialize(settings);
         }
 

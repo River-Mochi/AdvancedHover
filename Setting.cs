@@ -14,7 +14,7 @@ namespace AdvancedHoverSystem
     using Game.UI.Localization;                // LocalizedString
     using Game.UI.Widgets;
 
-    [FileLocation(nameof(AdvancedHoverSystem))]
+    [FileLocation(nameof(AdvancedHover))]
     // Declare our button action so a binding can target it.
     [SettingsUIKeyboardAction(Mod.kToggleOverlayActionName, ActionType.Button, usages: new[] { Usages.kMenuUsage })]
 

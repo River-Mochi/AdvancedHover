@@ -1,32 +1,21 @@
 // Systems/RenderSystemGuidelines.cs
-// Advanced Hover — translucent guidelines via GuideLineSettingsData (works across loads, respects toggle)
+// Advanced Hover — keep guideline dashes translucent by editing RenderingSettings/GuideLineSettingsData
 
 namespace AdvancedHoverSystem
 {
-    using System;
-    using Colossal.Serialization.Entities;  // Purpose
+    using Colossal.Serialization.Entities; // Purpose
     using Game;                            // GameMode, GameSystemBase
-    using Game.Prefabs;                    // GuideLineSettingsData, PrefabSystem, PrefabID
-    using Unity.Entities;                  // Entity, EntityManager
-    using UnityEngine;                     // Color
+    using Game.Prefabs;                    // GuideLineSettingsData, PrefabSystem, PrefabID, RenderingSettingsPrefab
+    using Unity.Entities;
+    using UnityEngine;
 
-    /// <summary>
-    /// Applies translucent guideline palette by rewriting RenderingSettings → GuideLineSettingsData.
-    /// - Works on load (OnGameLoadingComplete).
-    /// - Can be requested on-demand (RequestApplyFromSettings).
-    /// - Restores original values when disabled (we capture once per session).
-    /// </summary>
     public partial class RenderSystemGuidelines : GameSystemBase
     {
         private PrefabSystem m_Prefabs = null!;
 
-        // Capture/restore support
-        private static bool s_OriginalCaptured;
-        private static GuideLineSettingsData s_Original;
-
-        // Requests from Settings UI
+        // Flip this from Setting.TransparentGuidelines setter — we’ll apply on next update.
         private static bool s_PendingApply;
-        private static bool s_LastDesiredEnabled;
+        private static bool s_LastEnabled = true;
 
         protected override void OnCreate()
         {
@@ -36,119 +25,86 @@ namespace AdvancedHoverSystem
 
         protected override void OnUpdate()
         {
-            // If the Settings UI toggled the option during play, do the work here.
             if (!s_PendingApply)
                 return;
 
             s_PendingApply = false;
-            ApplyInternal(enabled: s_LastDesiredEnabled, reason: "OnUpdate-Request");
+            Apply(s_LastEnabled, "OnUpdate(Request)");
         }
 
-        /// <summary>Called by Mod.cs once settings are loaded OR by Setting.cs when the toggle changes.</summary>
-        public static void RequestApplyFromSettings(bool enabled)
-        {
-            s_LastDesiredEnabled = enabled;
-            s_PendingApply = true;
-        }
-
-        /// <summary>Apply translucent palette after the game finished loading the save/map.</summary>
+        /// <summary>Run after city has loaded so RenderingSettings exists.</summary>
         protected override void OnGameLoadingComplete(Purpose purpose, GameMode mode)
         {
             base.OnGameLoadingComplete(purpose, mode);
-
-            var settings = Mod.Settings;
-            if (settings == null)
-                return;
-
-            // Honor saved toggle immediately after load.
-            ApplyInternal(enabled: settings.TransparentGuidelines, reason: "OnGameLoadingComplete");
+            // Apply current choice once the entities are ready.
+            Apply(Mod.Settings?.TransparentGuidelines ?? true, "OnGameLoadingComplete");
         }
 
-        // ---------- Core implementation ----------
-
-        private void ApplyInternal(bool enabled, string reason)
+        /// <summary>Called from Setting.TransparentGuidelines setter.</summary>
+        public static void RequestApplyFromSettings(bool enabled)
         {
-            try
-            {
-                if (!TryGetRenderingSettingsEntity(out var e))
-                {
-                    if (Mod.Settings?.VerboseLogging == true)
-                        Mod.s_Log.Info("[Guidelines] No RenderingSettings prefab/entity found.");
-                    return;
-                }
-
-                if (!EntityManager.HasComponent<GuideLineSettingsData>(e))
-                {
-                    if (Mod.Settings?.VerboseLogging == true)
-                        Mod.s_Log.Info("[Guidelines] Entity has no GuideLineSettingsData.");
-                    return;
-                }
-
-                var data = EntityManager.GetComponentData<GuideLineSettingsData>(e);
-
-                // Capture original the first time we touch it
-                if (!s_OriginalCaptured)
-                {
-                    s_Original = data;
-                    s_OriginalCaptured = true;
-
-                    if (Mod.Settings?.VerboseLogging == true)
-                    {
-                        Mod.s_Log.Info($"[Guidelines] Captured original: " +
-                            $"High={ToRGBA(data.m_HighPriorityColor)} " +
-                            $"Med={ToRGBA(data.m_MediumPriorityColor)} " +
-                            $"Low={ToRGBA(data.m_LowPriorityColor)} " +
-                            $"VeryLow={ToRGBA(data.m_VeryLowPriorityColor)}");
-                    }
-                }
-
-                if (enabled)
-                {
-                    // Translucent palette (alpha respected by the line renderer)
-                    data.m_HighPriorityColor = new Color(1.000f, 1.000f, 1.000f, 0.05f);
-                    data.m_MediumPriorityColor = new Color(0.753f, 0.753f, 0.753f, 0.55f);
-                    data.m_LowPriorityColor = new Color(0.502f, 0.869f, 1.000f, 0.25f);
-                    data.m_VeryLowPriorityColor = new Color(0.695f, 0.877f, 1.000f, 0.584f);
-                }
-                else
-                {
-                    // Restore the original palette (what the game had)
-                    if (s_OriginalCaptured)
-                        data = s_Original;
-                }
-
-                EntityManager.SetComponentData(e, data);
-
-                // Verbose telemetry
-                if (Mod.Settings?.VerboseLogging == true)
-                {
-                    Mod.s_Log.Info($"[Guidelines] {reason} → {(enabled ? "ENABLED (translucent)" : "DISABLED (restored)")}: " +
-                        $"High={ToRGBA(data.m_HighPriorityColor)} " +
-                        $"Med={ToRGBA(data.m_MediumPriorityColor)} " +
-                        $"Low={ToRGBA(data.m_LowPriorityColor)} " +
-                        $"VeryLow={ToRGBA(data.m_VeryLowPriorityColor)}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Mod.s_Log.Warn($"[Guidelines] Apply failed: {ex.GetType().Name}: {ex.Message}");
-            }
+            s_LastEnabled = enabled;
+            s_PendingApply = true;
         }
 
-        private bool TryGetRenderingSettingsEntity(out Entity e)
-        {
-            e = Entity.Null;
+        // ------- Internal -------
 
+        private void Apply(bool enabled, string reason)
+        {
+            // Find the RenderingSettings prefab/entity.
             if (!m_Prefabs.TryGetPrefab(new PrefabID(nameof(RenderingSettingsPrefab), "RenderingSettings"), out PrefabBase prefab))
-                return false;
+            {
+                if (Mod.Settings?.VerboseLogging == true)
+                    Mod.s_Log.Info($"[Guidelines] {reason}: RenderingSettings prefab not found.");
+                return;
+            }
 
-            if (!m_Prefabs.TryGetEntity(prefab, out e))
-                return false;
+            if (!m_Prefabs.TryGetEntity(prefab, out Entity e))
+            {
+                if (Mod.Settings?.VerboseLogging == true)
+                    Mod.s_Log.Info($"[Guidelines] {reason}: Could not get entity for RenderingSettings.");
+                return;
+            }
 
-            return true;
+            if (!EntityManager.HasComponent<GuideLineSettingsData>(e))
+            {
+                if (Mod.Settings?.VerboseLogging == true)
+                    Mod.s_Log.Info($"[Guidelines] {reason}: Entity missing GuideLineSettingsData.");
+                return;
+            }
+
+            var gd = EntityManager.GetComponentData<GuideLineSettingsData>(e);
+
+            // Your translucent palette (alphas respected by the engine).
+            if (enabled)
+            {
+                gd.m_HighPriorityColor = new Color(1.000f, 1.000f, 1.000f, 0.05f);
+                gd.m_MediumPriorityColor = new Color(0.753f, 0.753f, 0.753f, 0.55f);
+                gd.m_LowPriorityColor = new Color(0.502f, 0.869f, 1.000f, 0.25f);
+                gd.m_VeryLowPriorityColor = new Color(0.695f, 0.877f, 1.000f, 0.584f);
+            }
+            else
+            {
+                // Restore full opacity (keep RGB as-is).
+                gd.m_HighPriorityColor.a = 1f;
+                gd.m_MediumPriorityColor.a = 1f;
+                gd.m_LowPriorityColor.a = 1f;
+                gd.m_VeryLowPriorityColor.a = 1f;
+            }
+
+            EntityManager.SetComponentData(e, gd);
+
+            if (Mod.Settings?.VerboseLogging == true)
+            {
+                Mod.s_Log.Info(
+                    $"[Guidelines] {reason}: enabled={enabled} " +
+                    $"high={Fmt(gd.m_HighPriorityColor)} " +
+                    $"med={Fmt(gd.m_MediumPriorityColor)} " +
+                    $"low={Fmt(gd.m_LowPriorityColor)} " +
+                    $"vlow={Fmt(gd.m_VeryLowPriorityColor)}");
+            }
         }
 
-        private static string ToRGBA(Color c)
-            => $"({c.r:0.###},{c.g:0.###},{c.b:0.###},{c.a:0.###})";
+        private static string Fmt(Color c) => $"({c.r:0.##},{c.g:0.##},{c.b:0.##},{c.a:0.##})";
     }
 }

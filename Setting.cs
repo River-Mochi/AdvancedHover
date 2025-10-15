@@ -94,7 +94,7 @@ namespace AdvancedHoverSystem
         }
 
         // Enable translucent guidelines (toggle). Default ON.
-        [SettingsUISection(kTabActions, kGroupActionsMain)] // ← fixed: use kTabActions, not kSectionActions
+        [SettingsUISection(kTabActions, kGroupActionsMain)] //
         public bool TransparentGuidelines
         {
             get => m_TransparentGuidelines;

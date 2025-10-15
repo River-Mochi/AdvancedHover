@@ -1,5 +1,6 @@
 // Setting.cs
-// Advanced Hover — Options UI (Actions + About), hover color dropdown, F8 keybind, guideline translucency toggle, verbose logging
+// Advanced Hover — Options UI (Actions + About), hover color dropdown, F8 keybind,
+// guideline translucency toggle, verbose logging
 
 namespace AdvancedHoverSystem
 {
@@ -33,8 +34,8 @@ namespace AdvancedHoverSystem
 
         // Stored state
         private bool m_DisableHoverOutline;
-        private int m_HoverPresetIndex = 0;      // 0 = Medium Gray (default)
-        private bool m_EnableGuidelineTranslucency = true;
+        private int m_HoverPresetIndex = 0;     // 0 = Medium Gray (default)
+        private bool m_TransparentGuidelines = true;
 
         public Setting(IMod mod) : base(mod) { }
 
@@ -53,8 +54,10 @@ namespace AdvancedHoverSystem
                 bool show = !m_DisableHoverOutline;
                 int preset = HoverPresetIndex;
                 string name = GetPresetDisplayName(preset);
-                var color = show ? RenderSystemHover.ResolvePresetColor(preset)
-                                 : new UnityEngine.Color(0f, 0f, 0f, 0f);
+
+                var color = show
+                    ? RenderSystemHover.ResolvePresetColor(preset)
+                    : new UnityEngine.Color(0f, 0f, 0f, 0f);
 
                 RenderSystemHover.ApplyHoverColor(color, show, name);
             }
@@ -90,15 +93,16 @@ namespace AdvancedHoverSystem
             };
         }
 
-        // Guidelines translucency — simplified to a reliable toggle.
-        [SettingsUISection(kTabActions, kGroupActionsMain)]
-        public bool EnableGuidelineTranslucency
+        // Enable translucent guidelines (toggle). Default ON.
+        [SettingsUISection(kTabActions, kGroupActionsMain)] // ← fixed: use kTabActions, not kSectionActions
+        public bool TransparentGuidelines
         {
-            get => m_EnableGuidelineTranslucency;
+            get => m_TransparentGuidelines;
             set
             {
-                m_EnableGuidelineTranslucency = value;
-                RenderSystemGuidelines.Configure(m_EnableGuidelineTranslucency);
+                m_TransparentGuidelines = value;
+                // Apply now in the running game
+                RenderSystemGuidelines.RequestApplyFromSettings(value);
             }
         }
 
@@ -151,8 +155,8 @@ namespace AdvancedHoverSystem
         public override void SetDefaults()
         {
             m_DisableHoverOutline = false;
-            m_HoverPresetIndex = 0; // Medium Gray default per your request
-            m_EnableGuidelineTranslucency = true;
+            m_HoverPresetIndex = 0; // Medium Gray default
+            m_TransparentGuidelines = true;
             VerboseLogging = true;
         }
     }

@@ -41,8 +41,8 @@ namespace AdvancedHoverSystem
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.HoverPresetIndex)), "Hover outline color" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.HoverPresetIndex)),  "Choose a preset color for hovered prefabs." },
 
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.EnableGuidelineTranslucency)), "Guidelines translucency" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.EnableGuidelineTranslucency)),  "When enabled, guideline dashes render translucent." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.TransparentGuidelines)), "Enable translucent guidelines" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.TransparentGuidelines)),  "Render placement/guide lines with transparency instead of solid white." },
 
                 // Options — Actions/Keybinds
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.ToggleOverlayBinding)), "Toggle overlay (F8)" },

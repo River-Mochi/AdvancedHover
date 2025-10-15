@@ -51,8 +51,8 @@ namespace AdvancedHoverSystem
             // Ensure actions exist for the attributes in Setting.cs
             settings.RegisterKeyBindings();
 
-            // Apply initial UI state
-            RenderSystemGuidelines.Configure(settings.EnableGuidelineTranslucency);
+            // Apply initial UI state after RegisterInOptionsUI
+            RenderSystemGuidelines.RequestApplyFromSettings(Settings.TransparentGuidelines);
 
             // Apply initial hover color from dropdown (respect "DisableHoverOutline")
             {
